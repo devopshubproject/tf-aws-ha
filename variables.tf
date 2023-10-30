@@ -13,7 +13,7 @@ variable "instance_type" {
 variable "ami" {
   description = "The ami for the NGINX instances."
   type        = string
-  default     = "t2.micro" # Change to your desired instance ami
+  default     = "ami-0123456789" # Change to your desired instance ami
 }
 
 variable "initial_capacity" {

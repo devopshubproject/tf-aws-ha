@@ -21,6 +21,29 @@ resource "aws_subnet" "pvt_subnet" {
   availability_zone = "us-west-2b"
 }
 
+resource "aws_internet_gatewat" "igw" {
+  vpc_id = aws_vpc.vpc.id
+}
+
+resource "aws_route_table" "rt" {
+  vpc_id = aws_vpc.vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id = aws_subnet.pub_subnet.id
+  route_table_id = aws_route_table.rt.id
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = "eipalloc-xxxxxxxxx"
+  subnet_id = aws_subnet.pub_subnet.id
+}
+
 resource "aws_security_group" "sg" {
   name        = "nginx-sg"
   description = "Security group for the EC2 instance"
@@ -82,12 +105,12 @@ resource "aws_autoscaling_policy" "nginx_sp" {
   cooldown               = 300
   autoscaling_group_name = aws_autoscaling_group.nginx_asg.name
 
-  step_adjustment {
-    metric_interval_lower_bound = 0
-    scaling_adjustment          = 1
-  }
+  # step_adjustment {
+  #   metric_interval_lower_bound = 0
+  #   scaling_adjustment          = 1
+  # }
 
-  estimated_instance_warmup = 300
+  # estimated_instance_warmup = 300
 }
 
 # Create a CloudWatch Alarm for CPU utilization
@@ -111,7 +134,7 @@ resource "aws_lb" "alb" {
   name                       = "ngnix-alb"
   internal                   = false
   load_balancer_type         = "application"
-  subnets                    = [aws_subnet.pub_subnet.id]
+  subnets                    = [aws_subnet.pub_subnet.id, aws_subnet.pvt_subnet.id]
   enable_deletion_protection = false
 }
 
@@ -131,15 +154,15 @@ resource "aws_lb_listener" "listener" {
   port              = 80
   protocol          = "HTTP"
 
-  default_action {
-    type = "fixed-response"
+  # default_action {
+  #   type = "fixed-response"
 
-    fixed_response {
-      content_type = "text/plain"
-      message_body = "Healthy"
-      status_code  = "200"
-    }
-  }
+  #   fixed_response {
+  #     content_type = "text/plain"
+  #     message_body = "Healthy"
+  #     status_code  = "200"
+  #   }
+  # }
 
   default_action {
     type             = "forward"
